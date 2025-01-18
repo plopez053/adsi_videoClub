@@ -280,18 +280,21 @@ def respondiendomensajeforo():
 
 
 
-@app.route('/review')
-def review():
+@app.route('/review/<imdbID>')
+def review(imdbID):
 	if 'user' not in dir(request) or not request.user or not request.user.token:
 		return redirect('/')
-	bookId = request.args.get('bookId', type=int)
-	book = library.search_book_by_id(bookId)
-	return render_template('review.html', book=book)
+	api_key = "5640ad5b"
+	url = f"http://www.omdbapi.com/?i={imdbID}&apikey={api_key}"
+	response = requests.get(url)
+	movie = response.json()
+	return render_template('review.html', movie=movie)
 
 @app.route('/post-review', methods=['POST'])
 def post_review():
 	data = request.get_json()
-	resultado = library.save_review(data['book_id'], data['user_email'], data['rating'], data['review_text'])
+	print(data)
+	resultado = library.save_review(data['userId'], data['movieId'], data['punctuation'], data['review_text'])
 	if resultado == 1:
 		return redirect('/catalogue')
 	

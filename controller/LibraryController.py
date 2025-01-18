@@ -184,8 +184,8 @@ class LibraryController:
 			print(f"Error borrando usuario: {e}")
 
 
-	def save_review(self, book_id, user_email, rating, review_text):
-		exito = db.insert("INSERT INTO Reviews (book_id, user_email, rating, review_text) VALUES ( ?, ?, ?, ?)", (book_id, user_email, rating, review_text))
+	def save_review(self, userID, movieID, rating, review_text):
+		exito = db.insert("INSERT INTO Review (user_id, movie_id, rating, text) VALUES ( ?, ?, ?, ?)", (userID, movieID, rating, review_text))
 		return 1 if exito else 0
 
 	def get_reviews_by_book_id(self, book_id):

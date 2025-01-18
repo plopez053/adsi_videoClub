@@ -8,12 +8,10 @@
     <hr class="hr" />
 
     <div class="book-info">
-        {% if book.cover: %}
-        <img src="{{book.cover}}" class="rounded" style="max-width: 6rem; height: fit-content;">
-        {% endif %}
+
         <div class="book-title-author">
-            <h2 class="book-title">{{ book.title }}</h2>
-            <h4 class="book-subtitle mb-2 text-muted">{{book.author }}</h4>
+            <h2 class="book-title">{{movie.Title}}</h2>
+            <img src="{{ movie.Poster }}" class="card-img-top" alt="{{ movie.Title }}">
         </div>
         <style>
             .book-title-author {
@@ -77,9 +75,8 @@
             var review_text = document.getElementById('review-text').value;
             var rating = selectedStars;
             var urlParams = new URLSearchParams(window.location.search);
-            var bookId = urlParams.get('bookId'); // Replace 'id' with the actual parameter name
-            var userEmail = '{{ request.user.email }}';
-           
+            var movieID = window.location.pathname.split('/').pop();
+            var userId = '{{ request.user.id }}';
             
             fetch('/post-review', {
                 method: 'POST',
@@ -87,11 +84,10 @@
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    book_id: bookId,
-                    user_email: userEmail,
-                    rating: rating,
+                    userId:userId,
+                    movieId:movieID,
+                    punctuation: rating,
                     review_text: review_text,
-                    date_time: new Date().toISOString(),
                 }),
             })
 
@@ -102,7 +98,7 @@
                 // No need to return response.url
             })
             .then(() => {
-                window.location.href = '/read-reviews?bookId=' + bookId ;
+                window.location.href = '/movie/' + movieID;
             })
             .catch((error) => {
                 console.error('Error:', error);

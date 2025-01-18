@@ -40,6 +40,18 @@ cur.execute("""
     )
 """)
 
+
+cur.execute("""
+    CREATE TABLE IF NOT EXISTS Review(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        movie_id TEXT,
+        rating INTEGER,
+        text TEXT,
+        FOREIGN KEY(user_id) REFERENCES User(id)
+    )
+            
+""")
 ### Insert users
 
 # Usar la ruta absoluta al archivo usuarios.json
