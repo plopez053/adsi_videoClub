@@ -106,9 +106,28 @@ def movie_details(imdbID):
             SELECT COUNT(*) FROM Alquiler WHERE user_id = ? AND movie_id = ? AND end_time > ?
         """, (user_id, imdbID, datetime.now()))
         already_rented = cur.fetchone()[0] > 0
+        cur.execute("""
+            SELECT user_id, rating, text FROM Review WHERE movie_id = ?
+        """, (imdbID,))
+        reviews_data = cur.fetchall()
+        reviews = []
+        for row in reviews_data:
+            user_id = row[0]     
+            cur.execute("""
+                SELECT name FROM User WHERE id = ?
+            """, (user_id,))
+            username = cur.fetchone()[0]
+            print(username)
+            new_review = {
+                'rating': row[1],
+                'text': row[2],
+                'username': username
+            }
+            reviews.append(new_review)
+			
         con.close()
 
-    return render_template('movie_details.html', movie=movie, already_rented=already_rented)
+    return render_template('movie_details.html', movie=movie, already_rented=already_rented, reviews=reviews)
 
 @app.route('/reserva_exitosa')
 def reserva_exitosa():
