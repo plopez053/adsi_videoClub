@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container p-5 my-5 border">
+    <div class="row">
+        <div class="col-md-4">
+            <img src="{{ movie.Poster }}" class="img-fluid" alt="{{ movie.Title }}">
+        </div>
+        <div class="col-md-8">
+            <h2>{{ movie.Title }}</h2>
+            <p><strong>Año:</strong> {{ movie.Year }}</p>
+            <p><strong>Clasificación:</strong> {{ movie.Rated }}</p>
+            <p><strong>Estreno:</strong> {{ movie.Released }}</p>
+            <p><strong>Duración:</strong> {{ movie.Runtime }}</p>
+            <p><strong>Género:</strong> {{ movie.Genre }}</p>
+            <p><strong>Director:</strong> {{ movie.Director }}</p>
+            <p><strong>Escritor:</strong> {{ movie.Writer }}</p>
+            <p><strong>Actores:</strong> {{ movie.Actors }}</p>
+            <p><strong>Trama:</strong> {{ movie.Plot }}</p>
+            <p><strong>Idioma:</strong> {{ movie.Language }}</p>
+            <p><strong>País:</strong> {{ movie.Country }}</p>
+            <p><strong>Premios:</strong> {{ movie.Awards }}</p>
+            <p><strong>Calificación IMDB:</strong> {{ movie.imdbRating }}</p>
+            <p><strong>Taquilla:</strong> {{ movie.BoxOffice }}</p>
+            {% if request.user %}
+                {% if already_rented %}
+                    <p><strong>Ya has alquilado esta película.</strong></p>
+                {% else %}
+                    <form action="/rent-movie/{{ movie.imdbID }}" method="POST">
+                        <button type="submit" class="btn btn-primary">Alquilar Película</button>
+                    </form>
+                {% endif %}
+            {% else %}
+                <p><a href="/login" class="btn btn-primary">Iniciar sesión para alquilar esta película</a></p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

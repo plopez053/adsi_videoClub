@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+{% if request.user|default (0)|attr ('admin') == 1 %}
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin</title>
+    <div class="text-center">
+    <h2> Bienvenido señor administrador al sistema de gestion de usuarios</h2>
+    </div>
+</head>
+<body>
+<div class="container">
+  <div class="row justify-content-center">
+    <div class="col-md-6">
+      <form class="form-horizontal" method="POST" action="/add-user">
+        <div class="form-group">
+          <label for="Nombre" class="col-sm-3 control-label">Nombre</label>
+          <div class="col-sm-9">
+            <input type="text" class="form-control" id="nombre" name="nombre" placeholder="Nombre" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="Email" class="col-sm-3 control-label">Email</label>
+          <div class="col-sm-9">
+            <input type="email" class="form-control" id="email" name="email" placeholder="Email" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="Contraseña" class="col-sm-3 control-label">Contraseña</label>
+          <div class="col-sm-9">
+            <input type="password" class="form-control" id="contraseña" name="contraseña" placeholder="Contraseña" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="EsAdmin" class="col-sm-3 control-label">¿Es administrador?</label>
+          <div class="col-sm-9">
+            <input type="number" class="form-control" id="esadmin" name="esadmin" placeholder="0 NO 1 SI" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <div class="col-sm-offset-3 col-sm-9">
+              <br>
+            <button type="submit" class="btn btn-primary">Introducir usuario en BD</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+<div class="container mt-5">
+    <ul id="lista-usuarios" class="list-group">
+        <li class="list-group-item"><strong> ID - Nombre - Email - Contraseña - EsAdmin </strong></li>
+        {% for usuario in usuarios %}
+        <li class="list-group-item">
+            {{ usuario[0] }} - {{ usuario[1] }} - {{ usuario[2] }} - {{ usuario[3] }} - {{ usuario[4] }}
+            <form action="/delete-user" method="POST" style="display:inline;">
+                <input type="hidden" name="user_id" value="{{ usuario[0] }}">
+                <button type="submit" class="btn btn-danger">Eliminar</button>
+            </form>
+            <a href="/edit-user/{{ usuario[0] }}" class="btn btn-info">Actualizar datos</a>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+</body>
+</html>
+{% else %}
+<div class="alert alert-danger text-center" role="alert"><h1><strong>¡ATENCIÓN!</strong> No tienes permiso para acceder a esta página.</h1>
+    <br>
+    <br>
+    <h1>Este incidente sera reportado.</h1>
+</div>
+{% endif %}
+
+{% endblock %}
