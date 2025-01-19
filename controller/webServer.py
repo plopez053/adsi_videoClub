@@ -89,6 +89,7 @@ def movie_details(imdbID):
     movie = response.json()
 
     already_rented = False
+    already_reviewed = False
     reviews = []
     total_rating = 0
     if request.user:
@@ -99,6 +100,10 @@ def movie_details(imdbID):
             SELECT COUNT(*) FROM Alquiler WHERE user_id = ? AND movie_id = ? AND end_time > ?
         """, (user_id, imdbID, datetime.now()))
         already_rented = cur.fetchone()[0] > 0
+        cur.execute("""
+            SELECT COUNT(*) FROM Review WHERE user_id = ? AND movie_id = ?
+        """, (user_id, imdbID))
+        already_reviewed = cur.fetchone()[0] > 0
         cur.execute("""
             SELECT user_id, rating, text FROM Review WHERE movie_id = ?
         """, (imdbID,))
@@ -118,14 +123,11 @@ def movie_details(imdbID):
             total_rating += row[1]
         con.close()
 
-    # Ordenar las reseñas por puntuación de mayor a menor
     reviews = sorted(reviews, key=lambda x: x['rating'], reverse=True)
-
-    # Calcular la puntuación media
     average_rating = total_rating / len(reviews) if reviews else 0
     average_rating = round(average_rating, 2)
 
-    return render_template('movie_details.html', movie=movie, already_rented=already_rented, reviews=reviews, average_rating=average_rating)
+    return render_template('movie_details.html', movie=movie, already_rented=already_rented, already_reviewed=already_reviewed, reviews=reviews, average_rating=average_rating)
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -171,11 +173,27 @@ def review(imdbID):
 
 @app.route('/post-review', methods=['POST'])
 def post_review():
-	data = request.get_json()
-	print(data)
-	resultado = videoClub.save_review(data['userId'], data['movieId'], data['punctuation'], data['review_text'])
-	if resultado == 1:
-		return redirect('/catalogue')
+    data = request.get_json()
+    user_id = data['userId']
+    movie_id = data['movieId']
+
+    # Check if the user has already written a review for this movie
+    con = sqlite3.connect("datos.db")
+    cur = con.cursor()
+    cur.execute("""
+        SELECT COUNT(*) FROM Review WHERE user_id = ? AND movie_id = ?
+    """, (user_id, movie_id))
+    review_count = cur.fetchone()[0]
+    con.close()
+
+    if review_count > 0:
+        return "You have already written a review for this movie", 403
+
+    resultado = videoClub.save_review(user_id, movie_id, data['punctuation'], data['review_text'])
+    if resultado == 1:
+        return redirect('/catalogue')
+    else:
+        return "Failed to save review", 500
 
 
 
@@ -204,12 +222,12 @@ def edit_review():
 @app.route('/delete-review')
 def delete_review():
     reviewId = request.args.get('reviewId', type=int)
-    user_id = request.user.id  # Asumiendo que tienes el ID del usuario en la sesión
+    user_id = request.user.id  # Assuming you have the user ID in the session
     review = videoClub.get_review_by_id(reviewId)
-    if delete_review(reviewId, user_id):
-        return redirect(url_for('perfil'))  # Redirigir al perfil después de eliminar la reseña
+    if videoClub.delete_review(reviewId, user_id):
+        return redirect(url_for('perfil'))  # Redirect to profile after deleting the review
     else:
-        return "No tienes permiso para eliminar esta reseña", 403
+        return "You do not have permission to delete this review", 403
 
 @app.route('/update-review', methods=['POST'])
 def update_review():
@@ -369,7 +387,6 @@ def my_rentals():
         SELECT movie_id, end_time FROM Alquiler WHERE user_id = ? AND end_time > ?
     """, (user_id, datetime.now()))
     rentals = cur.fetchall()
-    con.close()
 
     movies = []
     api_key = "5640ad5b"
@@ -379,6 +396,19 @@ def my_rentals():
         response = requests.get(url)
         movie = response.json()
         movie['end_time'] = end_time
+
+        # Check if the user has already written a review for this movie
+        cur.execute("""
+            SELECT id FROM Review WHERE user_id = ? AND movie_id = ?
+        """, (user_id, movie_id))
+        review = cur.fetchone()
+        if review:
+            movie['already_reviewed'] = True
+            movie['review_id'] = review[0]
+        else:
+            movie['already_reviewed'] = False
+
         movies.append(movie)
+    con.close()
 
     return render_template('my_rentals.html', movies=movies)

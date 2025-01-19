@@ -12,8 +12,11 @@
                     <h5 class="card-title">{{ movie.Title }}</h5>
                     <p class="card-text">{{ movie.Year }}</p>
                     <p class="card-text"><strong>Disponible hasta:</strong> {{ movie.end_time }}</p>
+                    {% if movie.already_reviewed %}
+                    <a href="/edit-review?reviewId={{ movie.review_id }}" class="btn btn-primary">Editar Reseña</a>
+                    {% else %}
                     <a href="/review/{{ movie.imdbID }}" class="btn btn-primary">Escribir Reseña</a>
-
+                    {% endif %}
                 </div>
             </div>
         </div>

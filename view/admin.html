@@ -2,7 +2,7 @@
 
 {% block content %}
 
-{% if request.user|default (0)|attr ('admin') == 1 %}
+{% if request.user|default(0)|attr('admin') == 1 %}
 <html lang="es">
 <head>
     <meta charset="UTF-8">
@@ -17,12 +17,8 @@
         <br>
         <br>
         <div class="btn-group-vertical">
-        <a href="{{ url_for('gestor_libros') }}">
-             <button type="button" class="btn btn-primary btn-lg">Acceder a gestor de libros</button>
-        </a>
             <a href="{{ url_for('gestor_usuarios') }}">
-
-            <button type="button" class="btn btn-primary  btn-lg">Acceder a gestor de usuarios</button>
+                <button type="button" class="btn btn-primary btn-lg">Acceder a gestor de usuarios</button>
             </a>
         </div>
     </div>
@@ -34,8 +30,6 @@
     <br>
     <h1>Este incidente sera reportado.</h1>
 </div>
-
-
 {% endif %}
 
 {% endblock %}
