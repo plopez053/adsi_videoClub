@@ -3,6 +3,12 @@
 {% block content %}
 <div class="container p-5 my-5 border">
 
+{% if error %}
+  <div class="alert alert-danger" role="alert">
+    {{ error }}
+  </div>
+{% endif %}
+
 <form class="form-inline" method="POST">
   <!-- Email input -->
   <div class="input-group mb-2 mr-sm-2">
@@ -18,8 +24,6 @@
 
   <!-- Submit button -->
   <button type="submit" class="btn btn-primary btn-block mb-4">Sign in</button>
-
-
 </form>
 
 </div>

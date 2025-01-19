@@ -9,9 +9,13 @@ import requests
 
 app = Flask(__name__, static_url_path='', static_folder='../view/static', template_folder='../view/')
 
+# Configuración de la base de datos
+def get_db_connection():
+    con = sqlite3.connect("datos.db")
+    con.row_factory = sqlite3.Row
+    return con
 
-con = sqlite3.connect("datos.db")
-cur = con.cursor()
+app.config['DATABASE'] = get_db_connection()
 videoClub = VideoClubController()  # Actualiza el nombre aquí
 user_controller = UserController()
 
@@ -53,13 +57,60 @@ def admin():
     return render_template('admin.html', users=users)
 
 
-@app.route('/gestor_usuarios')
+@app.route('/gestor_usuarios', methods=['GET', 'POST'])
 def gestor_usuarios():
     if not request.user or not request.user.admin:
         return redirect('/login')
 
+    if request.method == 'POST':
+        # Lógica para crear un usuario
+        nombre = request.form['nombre']
+        email = request.form['email']
+        contraseña = request.form['contraseña']
+        esadmin = request.form['esadmin']
+        # Inserta el usuario en la base de datos
+        con = get_db_connection()
+        con.execute('INSERT INTO User (name, email, password, admin) VALUES (?, ?, ?, ?)',
+                    (nombre, email, contraseña, esadmin))
+        con.commit()
+        con.close()
+        return redirect(url_for('gestor_usuarios'))
+
     users = user_controller.get_all_users()
     return render_template('gestor_usuarios.html', usuarios=users)
+
+@app.route('/eliminar_usuario', methods=['POST'])
+def eliminar_usuario():
+    try:
+        user_id = request.form['id']
+        print(f"Intentando eliminar usuario con ID: {user_id}")  # Mensaje de depuración
+        con = get_db_connection()
+        con.execute('DELETE FROM User WHERE id = ?', (user_id,))
+        con.commit()
+        con.close()
+        print(f"Usuario con ID: {user_id} eliminado correctamente")  # Mensaje de depuración
+        return redirect(url_for('gestor_usuarios'))
+    except Exception as e:
+        print(f"Error deleting user: {e}")
+        return "Internal Server Error", 500
+    
+@app.route('/modificar_usuario', methods=['POST'])
+def modificar_usuario():
+    try:
+        user_id = request.form['id']
+        nombre = request.form['nombre']
+        email = request.form['email']
+        contraseña = request.form['contraseña']
+        esadmin = request.form['esadmin']
+        con = get_db_connection()
+        con.execute('UPDATE User SET name = ?, email = ?, password = ?, admin = ? WHERE id = ?',
+                    (nombre, email, contraseña, esadmin, user_id))
+        con.commit()
+        con.close()
+        return redirect(url_for('gestor_usuarios'))
+    except Exception as e:
+        print(f"Error updating user: {e}")
+        return "Internal Server Error", 500
 
 @app.route('/catalogue')
 def catalogue():
@@ -132,22 +183,24 @@ def movie_details(imdbID):
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-	if 'user' in dir(request) and request.user and request.user.token:
-		return redirect('/')
-	email = request.values.get("email", "")
-	password = request.values.get("password", "")
-	user = videoClub.get_user(email, password)
-	if user:
-		session = user.new_session()
-		resp = redirect("/")
-		resp.set_cookie('token', session.hash)
-		resp.set_cookie('time', str(session.time))
-	else:
-		if request.method == 'POST':
-			return redirect('/login')
-		else:
-			resp = render_template('login.html')
-	return resp
+    try:
+        if request.method == 'POST':
+            email = request.form['email']
+            password = request.form['password']
+            # Lógica de autenticación
+            user = videoClub.get_user(email, password)
+            if user:
+                session = user.new_session()
+                resp = redirect("/")
+                resp.set_cookie('token', session.hash)
+                resp.set_cookie('time', str(session.time))
+                return resp
+            else:
+                return render_template('login.html', error='Invalid credentials')
+        return render_template('login.html')
+    except Exception as e:
+        print(f"Error during login: {e}")
+        return "Internal Server Error", 500
 
 
 @app.route('/logout')
