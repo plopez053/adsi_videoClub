@@ -2,7 +2,7 @@ from . import BaseTestClass
 from unittest.mock import patch
 from flask import Flask
 from controller.webServer import solicitarAmistad
-from controller import LibraryController
+from controller import VideoClubController
 
 class TestAmigos(BaseTestClass): 
 
