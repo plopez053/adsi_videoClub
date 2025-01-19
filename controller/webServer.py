@@ -98,6 +98,8 @@ def movie_details(imdbID):
     movie = response.json()
 
     already_rented = False
+    reviews = []
+    total_rating = 0
     if request.user:
         user_id = request.user.id
         con = sqlite3.connect("datos.db")
@@ -110,24 +112,29 @@ def movie_details(imdbID):
             SELECT user_id, rating, text FROM Review WHERE movie_id = ?
         """, (imdbID,))
         reviews_data = cur.fetchall()
-        reviews = []
         for row in reviews_data:
-            user_id = row[0]     
+            user_id = row[0]
             cur.execute("""
                 SELECT name FROM User WHERE id = ?
             """, (user_id,))
             username = cur.fetchone()[0]
-            print(username)
             new_review = {
                 'rating': row[1],
                 'text': row[2],
                 'username': username
             }
             reviews.append(new_review)
-			
+            total_rating += row[1]
         con.close()
 
-    return render_template('movie_details.html', movie=movie, already_rented=already_rented, reviews=reviews)
+    # Ordenar las reseñas por puntuación de mayor a menor
+    reviews = sorted(reviews, key=lambda x: x['rating'], reverse=True)
+
+    # Calcular la puntuación media
+    average_rating = total_rating / len(reviews) if reviews else 0
+    average_rating = round(average_rating, 2)
+
+    return render_template('movie_details.html', movie=movie, already_rented=already_rented, reviews=reviews, average_rating=average_rating)
 
 @app.route('/reserva_exitosa')
 def reserva_exitosa():
@@ -336,96 +343,62 @@ def format_datetime(value):
 
 @app.route('/edit-review')
 def edit_review():
-	reviewId = request.args.get('reviewId', type=int)
-	review = library.get_review_by_id(reviewId)
-	book = library.search_book_by_id(review[1])
-	return render_template('edit_review.html', review=review, book=book)
+    reviewId = request.args.get('reviewId', type=int)
+    review = library.get_review_by_id(reviewId)
+    movie_id = review[2]
+    
+    # Obtener detalles de la película desde la API de OMDB
+    api_key = "5640ad5b"
+    url = f"http://www.omdbapi.com/?i={movie_id}&apikey={api_key}"
+    response = requests.get(url)
+    movie = response.json()
+    
+    return render_template('edit_review.html', review=review, movie=movie)
 
 @app.route('/delete-review')
 def delete_review():
-	reviewId = request.args.get('reviewId', type=int)
-	review = library.get_review_by_id(reviewId)
-	library.delete_review(reviewId)
-	return redirect(url_for('read_reviews', bookId=review[1]))
+    reviewId = request.args.get('reviewId', type=int)
+    user_id = request.user.id  # Asumiendo que tienes el ID del usuario en la sesión
+    review = library.get_review_by_id(reviewId)
+    if library.delete_review(reviewId, user_id):
+        return redirect(url_for('perfil'))  # Redirigir al perfil después de eliminar la reseña
+    else:
+        return "No tienes permiso para eliminar esta reseña", 403
 
 @app.route('/update-review', methods=['POST'])
 def update_review():
-	data = request.get_json()
-	library.edit_review(data['id'], data['rating'], data['review_text'])
-	return redirect(url_for('read_reviews', bookId=data['book_id']))
+    data = request.get_json()
+    user_id = request.user.id  # Asumiendo que tienes el ID del usuario en la sesión
+    if library.edit_review(data['id'], user_id, data['rating'], data['review_text']):
+        return redirect(url_for('movie_details', imdbID=data['movie_id']))
+    else:
+        return "No tienes permiso para editar esta reseña", 403
 
 @app.route('/perfil')
 def perfil():
-	username = request.args.get("username", "")
-	if "@" in username:
-		user_email = username
-		username = library.get_username_by_email(username)
-	else:
-		user_email = library.get_email_by_username(username)
-	reviews = library.get_reviews_by_user(user_email)
-	return render_template('perfil.html', perfil_username=username, reviews=reviews, user_email=user_email)
+    if not request.user:
+        return redirect('/login')
 
-@app.route('/solicitarAmistad', methods=['POST'])
-def solicitarAmistad():
-    email_user = request.form["iduser"]
-    email_amigo = request.form["idamigo"]
+    user_id = request.user.id
+    username = request.user.name
 
-    iduser = library.get_id_by_email(email_user)
-    idamigo = library.get_id_by_email(email_amigo)	
-    if not library.comprobarExisteAmistad(iduser, idamigo):
-        library.solicitarAmistad(iduser, idamigo)
+    # Obtener las reseñas del usuario
+    reviews = library.get_reviews_by_user(user_id)
 
-    return redirect('/perfil?username='+email_amigo)
+    # Obtener detalles de las películas desde la API de OMDB
+    movies = []
+    api_key = "5640ad5b"
+    for review in reviews:
+        review_id, movie_id, rating, text = review
+        url = f"http://www.omdbapi.com/?i={movie_id}&apikey={api_key}"
+        response = requests.get(url)
+        movie = response.json()
+        movie['rating'] = rating
+        movie['text'] = text
+        movie['review_id'] = review_id
+        movies.append(movie)
 
-@app.route('/aceptarAmistad', methods=['POST'])
-def aceptarAmistad():
-    email_user = request.form["iduser"]
-    amigo_username = request.form["idamigo"]
-
-    email_amigo = library.get_email_by_username(amigo_username)
-
-    iduser = library.get_id_by_email(email_user)
-    idamigo = library.get_id_by_email(email_amigo)	
-
-    library.aceptarAmistad(iduser, idamigo)
-
-    return redirect('/perfil?username='+email_user)
-
-@app.route('/rechazarAmistad', methods=['POST'])
-def rechazarAmistad():
-	email_user = request.form["iduser"]
-	amigo_username = request.form["idamigo"]
-
-	email_amigo = library.get_email_by_username(amigo_username)
-
-	iduser = library.get_id_by_email(email_user)
-	idamigo = library.get_id_by_email(email_amigo)	
-
-	library.rechazarAmistad(iduser, idamigo)
-
-	return redirect('/perfil?username='+email_user)
-
-@app.route('/misSolicitudes')
-def misSolicitudes():
-    user_email = request.args.get("user_email", "")
-    id = library.get_id_by_email(user_email)
-    solicitudes = library.get_solicitudes(id)
-    return render_template('mis_solicitudes.html', solicitudes=solicitudes, user_email=user_email)
-
-@app.route('/misAmigos')
-def misAmigos():
-	user_email = request.args.get("user_email", "")
-	id = library.get_id_by_email(user_email)
-	amigos = library.get_amigos(id)
-	return render_template('mis_amigos.html', amigos=amigos, user_email=user_email)
-
-@app.template_filter('formatdatetimef')
-def format_datetime(value):
-	if value is None:
-		return ""
-
-	datetime_object = datetime.strptime(value, '%Y-%m-%d %H:%M:%S.%f')
-	return datetime_object.strftime('%B %d %Y, %H:%M:%S')
+    return render_template('perfil.html', perfil_username=username, movies=movies, user_id=user_id, current_user=request.user)
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -453,6 +426,8 @@ def register():
 
 @app.route('/edit-profile', methods=['GET', 'POST'])
 def edit_profile():
+    if not request.user:
+        return redirect('/login')
     if request.method == 'POST':
         user_id = request.user.id
         username = request.form['username']

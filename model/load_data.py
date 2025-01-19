@@ -11,22 +11,22 @@ cur = con.cursor()
 ### Create tables
 
 cur.execute("""
-	CREATE TABLE IF NOT EXISTS User(
-		id integer primary key AUTOINCREMENT,
-		name varchar(20),
-		email varchar(30),
-		password varchar(32),
-		admin boolean
-	)
+    CREATE TABLE IF NOT EXISTS User(
+        id integer primary key AUTOINCREMENT,
+        name varchar(20),
+        email varchar(30),
+        password varchar(32),
+        admin boolean
+    )
 """)
 
 cur.execute("""
-	CREATE TABLE IF NOT EXISTS Session(
-		session_hash varchar(32) primary key,
-		user_id integer,
-		last_login integer,
-		FOREIGN KEY(user_id) REFERENCES User(id)
-	)
+    CREATE TABLE IF NOT EXISTS Session(
+        session_hash varchar(32) primary key,
+        user_id integer,
+        last_login integer,
+        FOREIGN KEY(user_id) REFERENCES User(id)
+    )
 """)
 
 cur.execute("""
@@ -40,7 +40,6 @@ cur.execute("""
     )
 """)
 
-
 cur.execute("""
     CREATE TABLE IF NOT EXISTS Review(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -50,8 +49,16 @@ cur.execute("""
         text TEXT,
         FOREIGN KEY(user_id) REFERENCES User(id)
     )
-            
 """)
+
+cur.execute("""
+    CREATE TABLE IF NOT EXISTS Movie(
+        imdbID TEXT PRIMARY KEY,
+        Title TEXT,
+        Poster TEXT
+    )
+""")
+
 ### Insert users
 
 # Usar la ruta absoluta al archivo usuarios.json
