@@ -89,7 +89,6 @@ def movie_details(imdbID):
     movie = response.json()
 
     already_rented = False
-    already_reviewed = False
     reviews = []
     total_rating = 0
     if request.user:
@@ -101,10 +100,6 @@ def movie_details(imdbID):
         """, (user_id, imdbID, datetime.now()))
         already_rented = cur.fetchone()[0] > 0
         cur.execute("""
-            SELECT COUNT(*) FROM Review WHERE user_id = ? AND movie_id = ?
-        """, (user_id, imdbID))
-        already_reviewed = cur.fetchone()[0] > 0
-        cur.execute("""
             SELECT user_id, rating, text FROM Review WHERE movie_id = ?
         """, (imdbID,))
         reviews_data = cur.fetchall()
@@ -113,21 +108,26 @@ def movie_details(imdbID):
             cur.execute("""
                 SELECT name FROM User WHERE id = ?
             """, (user_id,))
-            username = cur.fetchone()[0]
-            new_review = {
-                'rating': row[1],
-                'text': row[2],
-                'username': username
-            }
-            reviews.append(new_review)
-            total_rating += row[1]
+            user_result = cur.fetchone()
+            if user_result:
+                username = user_result[0]
+                new_review = {
+                    'rating': row[1],
+                    'text': row[2],
+                    'username': username
+                }
+                reviews.append(new_review)
+                total_rating += row[1]
         con.close()
 
+    # Ordenar las reseñas por puntuación de mayor a menor
     reviews = sorted(reviews, key=lambda x: x['rating'], reverse=True)
-    average_rating = total_rating / len(reviews) if reviews else 0
-    average_rating = round(average_rating, 2)
 
-    return render_template('movie_details.html', movie=movie, already_rented=already_rented, already_reviewed=already_reviewed, reviews=reviews, average_rating=average_rating)
+    # Calcular la puntuación media
+    average_rating = total_rating / len(reviews) if reviews else 0
+    average_rating = f"{average_rating:.2f}"  # Formatear con dos decimales
+
+    return render_template('movie_details.html', movie=movie, already_rented=already_rented, reviews=reviews, average_rating=average_rating)
 
 
 @app.route('/login', methods=['GET', 'POST'])
